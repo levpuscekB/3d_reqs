@@ -14,8 +14,8 @@ SHEET_NAME = "AllData"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}"
 
 st.title("Reactor Applications in Phase Space")
-st.caption("Flux and Energy axes are shown in log₁₀ with 10^x tick labels; Temperature in °C.")
-st.markdown(f"**Data source:** [Google sheets](https://docs.google.com/spreadsheets/d/1KeB-INjb93b77xqG4CiHU5tqDdoa60GdI5ZHve6tsbk/edit?gid=0#gid=0)")
+st.caption("MPRR applications in 3D phase space of Temperature [°C], Neutron Flux [1/cm^2/s] and Neutron energy [eV]. ")
+st.markdown(f"**Data source:** [Google sheets](https://docs.google.com/spreadsheets/d/1KeB-INjb93b77xqG4CiHU5tqDdoa60GdI5ZHve6tsbk/edit?gid=0#gid=0)\n Visibility of applications can be changed by clicking on the entries in the legend.")
 
 # Manual refresh button
 if st.button("🔄 Reload data"):
@@ -219,6 +219,7 @@ st.plotly_chart(fig, width='stretch')
 
 with st.expander("Show raw data"):
     st.dataframe(df, width='stretch')
+
 
 
 
