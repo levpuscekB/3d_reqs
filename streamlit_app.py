@@ -15,7 +15,7 @@ CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:cs
 
 st.title("Reactor Applications in Phase Space")
 st.caption("Flux and Energy axes are shown in log₁₀ with 10^x tick labels; Temperature in °C.")
-st.markdown(f"**Data source:** [Google Sheet]({SHEET_URL})")
+st.markdown(f"**Data source:** [Google sheets](https://docs.google.com/spreadsheets/d/1tUAJO-4-rdmnmL4nGlJyuT4PfPPeksi1rc1ArAmRqQ4/edit?usp=sharing)")
 
 # Manual refresh button
 if st.button("🔄 Reload data"):
@@ -194,6 +194,7 @@ st.plotly_chart(fig, width='stretch')
 
 with st.expander("Show raw data"):
     st.dataframe(df, width='stretch')
+
 
 
 
