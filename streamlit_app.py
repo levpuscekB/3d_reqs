@@ -89,10 +89,6 @@ with st.sidebar:
     st.header("Plot settings")
     height = st.slider("Plot height (px)", 700, 1600, 1050, 50)
 
-    xlim = st.slider("Flux exponent range", 0, 20, (6, 18))
-    ylim = st.slider("Energy exponent range", -5, 10, (-3, 8))
-    zlim = st.slider("Temperature range (°C)", 0, 1500, (0, 1300))
-
     st.divider()
     st.subheader("Filter")
     names = ["(All)"] + sorted(df["name"].unique().tolist())
@@ -223,6 +219,7 @@ st.plotly_chart(fig, width='stretch')
 
 with st.expander("Show raw data"):
     st.dataframe(df, width='stretch')
+
 
 
 
