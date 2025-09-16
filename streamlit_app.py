@@ -93,7 +93,7 @@ with st.sidebar:
 
 
 # Apply filter
-plot_df = df if name_pick == "(All)" else df[df["name"] == name_pick]
+plot_df = df 
 
 # ---- Colors (unique & deterministic per name) ----
 palette = (qcolors.Dark24 + qcolors.Light24 + qcolors.Alphabet + qcolors.Set3 + qcolors.D3)
@@ -217,6 +217,7 @@ st.plotly_chart(fig, width='stretch')
 
 with st.expander("Show raw data"):
     st.dataframe(df, width='stretch')
+
 
 
 
