@@ -10,9 +10,8 @@ st.set_page_config(page_title="Reactor Applications – Phase Space", layout="wi
 
 # --------- Fixed Google Sheet ---------
 SHEET_ID = "1KeB-INjb93b77xqG4CiHU5tqDdoa60GdI5ZHve6tsbk"
-GID = "1396516895"
-CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&gid={GID}"
-SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?gid={GID}#gid={GID}"
+SHEET_NAME = "AllData"
+CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}"
 
 st.title("Reactor Applications in Phase Space")
 st.caption("Flux and Energy axes are shown in log₁₀ with 10^x tick labels; Temperature in °C.")
@@ -22,12 +21,13 @@ st.markdown(f"**Data source:** [Google Sheet]({SHEET_URL})")
 if st.button("🔄 Reload data"):
     st.session_state["_refresh"] = True
 
-@st.cache_data(ttl=0, show_spinner=True)
-def load_csv(url: str) -> pd.DataFrame:
-    # Some deployments of pandas.read_csv on Google CSVs can be flaky due to redirects; requests is robust.
-    r = requests.get(url, timeout=20)
-    r.raise_for_status()
-    df = pd.read_csv(io.BytesIO(r.content))
+@st.cache_data(ttl=0)
+def load_csv():
+    df = pd.read_csv(CSV_URL)
+    df = df.dropna(subset=["Project", "Time [years]", "Cost [k€]", "Researcher"])
+    df["Time (years)"] = pd.to_numeric(df["Time [years]"], errors="coerce")
+    df["Cost (k€)"] = df["Cost [k€]"].apply(parse_euro_number)
+    df["Cost (€)"] = df["Cost (k€)"] * 1000
     return df
 
 if st.session_state.get("_refresh", False):
@@ -36,7 +36,7 @@ if st.session_state.get("_refresh", False):
 
 # ---- Load & validate ----
 try:
-    df = load_csv(CSV_URL)
+    df = load_csv()
 except Exception as e:
     st.error("Could not fetch the Google Sheet via CSV link.")
     st.markdown(
@@ -194,6 +194,7 @@ st.plotly_chart(fig, width='stretch')
 
 with st.expander("Show raw data"):
     st.dataframe(df, width='stretch')
+
 
 
 
