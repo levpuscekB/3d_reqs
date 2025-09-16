@@ -164,7 +164,8 @@ fig.update_layout(
     height=height,
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width='stretch')
 
 with st.expander("Show raw data"):
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width='stretch')
+
