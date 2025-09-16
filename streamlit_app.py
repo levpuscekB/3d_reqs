@@ -16,7 +16,7 @@ CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:cs
 st.title("Reactor Applications in Phase Space")
 st.caption("MPRR applications in 3D phase space of Temperature [°C], Neutron Flux [1/cm^2/s] and Neutron energy [eV]. ")
 st.markdown(f"**Data source:** [Google sheets](https://docs.google.com/spreadsheets/d/1KeB-INjb93b77xqG4CiHU5tqDdoa60GdI5ZHve6tsbk/edit?gid=0#gid=0)")
-st.markdown(f"**Visibility of applications can be changed by clicking on the entries in the legend.**")
+st.markdown(f"**TIP:** To improve clarity, I recomend turning the applications on/off by clicking on them in the graph legend.**")
 # Manual refresh button
 if st.button("🔄 Reload data"):
     st.session_state["_refresh"] = True
@@ -222,6 +222,7 @@ st.plotly_chart(fig, width='stretch')
 
 with st.expander("Show raw data"):
     st.dataframe(df, width='stretch')
+
 
 
 
