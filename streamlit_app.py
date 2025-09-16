@@ -87,12 +87,10 @@ df["name"] = df["name"].astype(str)
 # ---- Sidebar controls (taller default to avoid clipping) ----
 with st.sidebar:
     st.header("Plot settings")
-    height = st.slider("Plot height (px)", 700, 1600, 1050, 50)
+    height = st.slider("Plot height (px) (change based on your screen size)", 700, 1600, 1050, 50)
 
     st.divider()
-    st.subheader("Filter")
-    names = ["(All)"] + sorted(df["name"].unique().tolist())
-    name_pick = st.selectbox("Application", names)
+
 
 # Apply filter
 plot_df = df if name_pick == "(All)" else df[df["name"] == name_pick]
@@ -219,6 +217,7 @@ st.plotly_chart(fig, width='stretch')
 
 with st.expander("Show raw data"):
     st.dataframe(df, width='stretch')
+
 
 
 
