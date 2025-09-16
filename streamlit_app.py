@@ -187,14 +187,10 @@ fig.update_layout(
     scene=dict(
         xaxis=dict(
             title="Neutron flux [1/(cm²·s)]",
-            tickvals=x_log_ticks,
-            ticktext=ticktext(x_log_ticks),
             range=[xlim[0], xlim[1]],
         ),
         yaxis=dict(
             title="Neutron energy [eV]",
-            tickvals=y_log_ticks,
-            ticktext=ticktext(y_log_ticks),
             range=[ylim[0], ylim[1]],
             autorange="reversed",  # invert like your Matplotlib plot
         ),
@@ -219,6 +215,7 @@ st.plotly_chart(fig, width='stretch')
 
 with st.expander("Show raw data"):
     st.dataframe(df, width='stretch')
+
 
 
 
