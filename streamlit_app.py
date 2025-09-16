@@ -3,29 +3,49 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from plotly.colors import qualitative as qcolors
+import io
+import requests
 
 st.set_page_config(page_title="Reactor Applications – Phase Space", layout="wide")
 
-# --------- Fixed Google Sheet (CSV export) ----------
+# --------- Fixed Google Sheet ---------
 SHEET_ID = "1KeB-INjb93b77xqG4CiHU5tqDdoa60GdI5ZHve6tsbk"
 GID = "0"
-CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
+CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&gid={GID}"
 SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?gid={GID}#gid={GID}"
 
 st.title("Reactor Applications in Phase Space")
 st.caption("Flux and Energy axes are shown in log₁₀ with 10^x tick labels; Temperature in °C.")
 st.markdown(f"**Data source:** [Google Sheet]({SHEET_URL})")
 
-@st.cache_data(show_spinner=False)
-def load_data(url: str) -> pd.DataFrame:
-    df = pd.read_csv(url)
+# Manual refresh button
+if st.button("🔄 Reload data"):
+    st.session_state["_refresh"] = True
+
+@st.cache_data(ttl=0, show_spinner=True)
+def load_csv(url: str) -> pd.DataFrame:
+    # Some deployments of pandas.read_csv on Google CSVs can be flaky due to redirects; requests is robust.
+    r = requests.get(url, timeout=20)
+    r.raise_for_status()
+    df = pd.read_csv(io.BytesIO(r.content))
     return df
 
-# Reload button to clear cache if sheet changes
-if st.button("Reload data from Google Sheet"):
-    load_data.clear()
+if st.session_state.get("_refresh", False):
+    st.cache_data.clear()
+    st.session_state["_refresh"] = False
 
-df = load_data(CSV_URL)
+# ---- Load & validate ----
+try:
+    df = load_csv(CSV_URL)
+except Exception as e:
+    st.error("Could not fetch the Google Sheet via CSV link.")
+    st.markdown(
+        "- Check the sheet sharing: **Anyone with the link → Viewer**.\n"
+        f"- Try opening this CSV URL in your browser: [{CSV_URL}]({CSV_URL})"
+    )
+    with st.expander("Error details"):
+        st.code(repr(e))
+    st.stop()
 
 required_cols = ["name", "flux_min", "flux_max", "energy_min", "energy_max", "temp_min", "temp_max"]
 missing = [c for c in required_cols if c not in df.columns]
@@ -33,45 +53,38 @@ if missing:
     st.error(f"Your sheet is missing required columns: {missing}")
     st.stop()
 
-# Ensure numeric
+# Coerce numeric columns; drop incomplete rows
 for c in ["flux_min", "flux_max", "energy_min", "energy_max", "temp_min", "temp_max"]:
     df[c] = pd.to_numeric(df[c], errors="coerce")
-df = df.dropna(subset=["name", "flux_min", "flux_max", "energy_min", "energy_max", "temp_min", "temp_max"])
+df = df.dropna(subset=required_cols)
+df["name"] = df["name"].astype(str)
 
-# --------- Controls ----------
+# ---- Sidebar controls (taller default to avoid clipping) ----
 with st.sidebar:
     st.header("Plot settings")
-    # Taller plot to avoid getting cut off + user control
-    height = st.slider("Plot height (px)", 600, 1400, 950, 50)
-
-    # Axis ticks and limits (kept from your MPL defaults)
-    x_log_ticks = st.multiselect("Flux tick exponents", [6, 8, 10, 12, 14, 16, 18], default=[6, 8, 10, 12, 14, 16, 18])
-    y_log_ticks = st.multiselect("Energy tick exponents", [-3, -1, 0, 2, 4, 6, 8], default=[-3, -1, 0, 2, 4, 6, 8])
+    height = st.slider("Plot height (px)", 700, 1600, 1050, 50)
+    x_log_ticks = st.multiselect("Flux tick exponents", [6, 8, 10, 12, 14, 16, 18],
+                                 default=[6, 8, 10, 12, 14, 16, 18])
+    y_log_ticks = st.multiselect("Energy tick exponents", [-3, -1, 0, 2, 4, 6, 8],
+                                 default=[-3, -1, 0, 2, 4, 6, 8])
     xlim = st.slider("Flux exponent range", 0, 20, (6, 18))
     ylim = st.slider("Energy exponent range", -5, 10, (-3, 8))
     zlim = st.slider("Temperature range (°C)", 0, 1500, (0, 1300))
 
     st.divider()
     st.subheader("Filter")
-    names = ["(All)"] + sorted(df["name"].astype(str).unique().tolist())
+    names = ["(All)"] + sorted(df["name"].unique().tolist())
     name_pick = st.selectbox("Application", names)
 
 # Apply filter
 plot_df = df if name_pick == "(All)" else df[df["name"] == name_pick]
 
-# --------- Color assignment (unique, deterministic) ----------
-# Large qualitative palette to cover many items
-palette = (
-    qcolors.Dark24
-    + qcolors.Light24
-    + qcolors.Alphabet
-    + qcolors.Set3
-    + qcolors.D3
-)
-name_list = sorted(df["name"].astype(str).unique().tolist())
+# ---- Colors (unique & deterministic per name) ----
+palette = (qcolors.Dark24 + qcolors.Light24 + qcolors.Alphabet + qcolors.Set3 + qcolors.D3)
+name_list = sorted(df["name"].unique().tolist())
 color_map = {n: palette[i % len(palette)] for i, n in enumerate(name_list)}
 
-# --------- Geometry helpers ----------
+# ---- Geometry helpers ----
 def cuboid_vertices(flux_range, energy_range, temp_range):
     x0, x1 = np.log10(flux_range[0]), np.log10(flux_range[1])
     y0, y1 = np.log10(energy_range[0]), np.log10(energy_range[1])
@@ -96,23 +109,20 @@ def add_wireframe(fig, name, color, flux_range, energy_range, temp_range):
             line=dict(width=6, color=color),
             name=name if first else None,
             showlegend=first,
-            hoverinfo="skip"  # hover handled by invisible mesh (next function)
+            hoverinfo="skip"  # we'll show hover on the invisible mesh
         ))
         first = False
 
 def add_hover_mesh(fig, name, color, flux_range, energy_range, temp_range, opacity=0.01):
     V, _, F = cuboid_vertices(flux_range, energy_range, temp_range)
     i, j, k = zip(*F)
-    # Invisible (nearly) volume so hovering anywhere shows the application name
+    # Ultra-low opacity mesh so hovering anywhere on the box shows its name
     fig.add_trace(go.Mesh3d(
         x=V[:,0], y=V[:,1], z=V[:,2],
         i=i, j=j, k=k,
-        color=color,
-        opacity=opacity,
-        name=name,
-        showlegend=False,
-        hoverinfo="text",
-        text=name
+        color=color, opacity=opacity,
+        name=name, showlegend=False,
+        hoverinfo="text", text=name
     ))
 
 def add_filled_box(fig, name, color, flux_range, energy_range, temp_range, opacity=0.15):
@@ -126,10 +136,10 @@ def add_filled_box(fig, name, color, flux_range, energy_range, temp_range, opaci
         hoverinfo="skip"
     ))
 
-# --------- Build plot ----------
+# ---- Build plot ----
 fig = go.Figure()
 
-# Reactor capability overlay (same as before)
+# Reactor capability overlay (semi-transparent)
 reactor_flux_range = (1e6, 5e14)
 reactor_energy_range = (0.025, 1e7)
 reactor_temp_range = (20, 1300)
@@ -154,10 +164,26 @@ def ticktext(vals):
 
 fig.update_layout(
     scene=dict(
-        xaxis=dict(title="Neutron flux [1/(cm²·s)]", tickvals=x_log_ticks, ticktext=ticktext(x_log_ticks), range=[xlim[0], xlim[1]]),
-        yaxis=dict(title="Neutron energy [eV]", tickvals=y_log_ticks, ticktext=ticktext(y_log_ticks), range=[ylim[0], ylim[1]], autorange="reversed"),
-        zaxis=dict(title="Temperature [°C]", range=[zlim[0], zlim[1]]),
+        xaxis=dict(
+            title="Neutron flux [1/(cm²·s)]",
+            tickvals=x_log_ticks,
+            ticktext=ticktext(x_log_ticks),
+            range=[xlim[0], xlim[1]],
+        ),
+        yaxis=dict(
+            title="Neutron energy [eV]",
+            tickvals=y_log_ticks,
+            ticktext=ticktext(y_log_ticks),
+            range=[ylim[0], ylim[1]],
+            autorange="reversed",  # invert like your Matplotlib plot
+        ),
+        zaxis=dict(
+            title="Temperature [°C]",
+            range=[zlim[0], zlim[1]],
+        ),
         aspectmode="cube",
+        # Give the 3D scene more vertical room inside the figure
+        domain=dict(x=[0.0, 1.0], y=[0.0, 1.0]),
     ),
     legend=dict(x=1.02, y=1, bgcolor="rgba(255,255,255,0.7)"),
     margin=dict(l=0, r=0, t=30, b=0),
@@ -168,4 +194,5 @@ st.plotly_chart(fig, width='stretch')
 
 with st.expander("Show raw data"):
     st.dataframe(df, width='stretch')
+
 
