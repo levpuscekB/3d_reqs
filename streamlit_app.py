@@ -22,12 +22,37 @@ if st.button("🔄 Reload data"):
     st.session_state["_refresh"] = True
 
 @st.cache_data(ttl=0)
-def load_csv():
-    df = pd.read_csv(CSV_URL)
-    df = df.dropna(subset=["Project", "Time [years]", "Cost [k€]", "Researcher"])
-    df["Time (years)"] = pd.to_numeric(df["Time [years]"], errors="coerce")
-    df["Cost (k€)"] = df["Cost [k€]"].apply(parse_euro_number)
-    df["Cost (€)"] = df["Cost (k€)"] * 1000
+def load_csv() -> pd.DataFrame:
+    # Read as strings so we can normalize EU formats reliably
+    df = pd.read_csv(CSV_URL, dtype=str, encoding="utf-8")
+    df.columns = [c.strip() for c in df.columns]
+
+    # Required columns for the phase-space plot
+    required = ["name","flux_min","flux_max","energy_min","energy_max","temp_min","temp_max"]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise KeyError(f"Missing required columns in sheet: {missing}")
+
+    # Normalize numeric strings like "1,00E+10" / "2,00E−02" → float
+    def to_num(x):
+        if pd.isna(x):
+            return np.nan
+        s = str(x).strip()
+        s = s.replace("\u2212", "-").replace("−", "-")  # Unicode minus → hyphen
+        s = s.replace("\xa0", "")                       # NBSP
+        s = s.replace(",", ".")                         # decimal comma → dot
+        try:
+            return float(s)
+        except ValueError:
+            return np.nan
+
+    num_cols = ["flux_min","flux_max","energy_min","energy_max","temp_min","temp_max"]
+    for c in num_cols:
+        df[c] = df[c].apply(to_num)
+
+    # Keep only valid, fully-parsed rows
+    df = df.dropna(subset=["name"] + num_cols)
+    df["name"] = df["name"].astype(str)
     return df
 
 if st.session_state.get("_refresh", False):
@@ -194,6 +219,7 @@ st.plotly_chart(fig, width='stretch')
 
 with st.expander("Show raw data"):
     st.dataframe(df, width='stretch')
+
 
 
 
