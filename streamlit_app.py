@@ -181,6 +181,11 @@ def ticktext(vals):
     return [f"10^{int(v) if v==int(v) else v}" for v in vals]
 
 fig.update_layout(
+    scene_camera=dict(
+        eye=dict(x=-1.25, y=1.25, z=1.25),  # rotated 90° CCW around Z
+        up=dict(x=0, y=0, z=1)
+    ),
+    uirevision="keep-camera"  # keeps user camera when the figure updates
     scene=dict(
         xaxis=dict(
             type="log",
@@ -217,6 +222,7 @@ st.plotly_chart(fig, width='stretch')
 
 with st.expander("Show raw data"):
     st.dataframe(df, width='stretch')
+
 
 
 
