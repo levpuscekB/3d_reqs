@@ -10,7 +10,7 @@ st.set_page_config(page_title="Reactor Applications – Phase Space", layout="wi
 
 # --------- Fixed Google Sheet ---------
 SHEET_ID = "1KeB-INjb93b77xqG4CiHU5tqDdoa60GdI5ZHve6tsbk"
-GID = "0"
+GID = "1396516895"
 CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&gid={GID}"
 SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?gid={GID}#gid={GID}"
 
@@ -194,5 +194,6 @@ st.plotly_chart(fig, width='stretch')
 
 with st.expander("Show raw data"):
     st.dataframe(df, width='stretch')
+
 
 
