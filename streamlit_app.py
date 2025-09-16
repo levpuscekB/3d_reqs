@@ -108,16 +108,19 @@ color_map = {n: palette[i % len(palette)] for i, n in enumerate(name_list)}
 
 # ---- Geometry helpers ----
 def cuboid_vertices(flux_range, energy_range, temp_range):
-    x0, x1 = np.log10(flux_range[0]), np.log10(flux_range[1])
-    y0, y1 = np.log10(energy_range[0]), np.log10(energy_range[1])
+    # USE RAW values (no np.log10 here)
+    x0, x1 = flux_range
+    y0, y1 = energy_range
     z0, z1 = temp_range
     V = np.array([
         [x0, y0, z0],[x1, y0, z0],[x1, y1, z0],[x0, y1, z0],
         [x0, y0, z1],[x1, y0, z1],[x1, y1, z1],[x0, y1, z1],
     ])
     edges = [(0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7)]
-    faces = [(0,1,2),(0,2,3),(4,5,6),(4,6,7),(0,1,5),(0,5,4),(1,2,6),(1,6,5),(2,3,7),(2,7,6),(3,0,4),(3,4,7)]
+    faces = [(0,1,2),(0,2,3),(4,5,6),(4,6,7),(0,1,5),(0,5,4),(1,2,6),(1,6,5),
+             (2,3,7),(2,7,6),(3,0,4),(3,4,7)]
     return V, edges, faces
+
 
 def add_wireframe(fig, name, color, flux_range, energy_range, temp_range):
     V, E, _ = cuboid_vertices(flux_range, energy_range, temp_range)
@@ -186,21 +189,26 @@ def ticktext(vals):
 fig.update_layout(
     scene=dict(
         xaxis=dict(
+            type="log",
             title="Neutron flux [1/(cm²·s)]",
-            range=[xlim[0], xlim[1]],
+            autorange=True,          # or set numeric range=[1e6, 1e18]
+            dtick=1,                 # 1 decade per major tick: 10^n
+            showexponent="all",
+            exponentformat="power",  # shows 10^n format
         ),
         yaxis=dict(
+            type="log",
             title="Neutron energy [eV]",
-            range=[ylim[0], ylim[1]],
-            autorange="reversed",  # invert like your Matplotlib plot
+            autorange="reversed",    # invert like before
+            dtick=1,
+            showexponent="all",
+            exponentformat="power",
         ),
         zaxis=dict(
             title="Temperature [°C]",
-            range=[zlim[0], zlim[1]],
+            autorange=True,          # or range=[0, 1300]
         ),
         aspectmode="cube",
-        # Give the 3D scene more vertical room inside the figure
-        domain=dict(x=[0.0, 1.0], y=[0.0, 1.0]),
     ),
     legend=dict(
         x=1.02, y=1,
@@ -215,6 +223,7 @@ st.plotly_chart(fig, width='stretch')
 
 with st.expander("Show raw data"):
     st.dataframe(df, width='stretch')
+
 
 
 
