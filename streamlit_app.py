@@ -164,14 +164,7 @@ def add_filled_box(fig, name, color, flux_range, energy_range, temp_range, opaci
 # ---- Build plot ----
 fig = go.Figure()
 
-# Reactor capability overlay (semi-transparent)
-reactor_flux_range = (1e6, 5e14)
-reactor_energy_range = (0.025, 1e7)
-reactor_temp_range = (20, 1300)
-add_filled_box(
-    fig, "Reactor capability (5–10 MW)", "gray",
-    reactor_flux_range, reactor_energy_range, reactor_temp_range, opacity=0.15
-)
+
 
 # Applications: wireframe + invisible mesh for hover
 for _, r in plot_df.iterrows():
@@ -219,6 +212,7 @@ st.plotly_chart(fig, width='stretch')
 
 with st.expander("Show raw data"):
     st.dataframe(df, width='stretch')
+
 
 
 
