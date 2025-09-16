@@ -88,10 +88,7 @@ df["name"] = df["name"].astype(str)
 with st.sidebar:
     st.header("Plot settings")
     height = st.slider("Plot height (px)", 700, 1600, 1050, 50)
-    x_log_ticks = st.multiselect("Flux tick exponents", [6, 8, 10, 12, 14, 16, 18],
-                                 default=[6, 8, 10, 12, 14, 16, 18])
-    y_log_ticks = st.multiselect("Energy tick exponents", [-3, -1, 0, 2, 4, 6, 8],
-                                 default=[-3, -1, 0, 2, 4, 6, 8])
+
     xlim = st.slider("Flux exponent range", 0, 20, (6, 18))
     ylim = st.slider("Energy exponent range", -5, 10, (-3, 8))
     zlim = st.slider("Temperature range (°C)", 0, 1500, (0, 1300))
@@ -124,30 +121,36 @@ def cuboid_vertices(flux_range, energy_range, temp_range):
 
 def add_wireframe(fig, name, color, flux_range, energy_range, temp_range):
     V, E, _ = cuboid_vertices(flux_range, energy_range, temp_range)
-    first = True
+
+    # Merge all edges into ONE trace using None separators
+    xs, ys, zs = [], [], []
     for (i, j) in E:
-        fig.add_trace(go.Scatter3d(
-            x=[V[i,0], V[j,0]],
-            y=[V[i,1], V[j,1]],
-            z=[V[i,2], V[j,2]],
-            mode="lines",
-            line=dict(width=6, color=color),
-            name=name if first else None,
-            showlegend=first,
-            hoverinfo="skip"  # we'll show hover on the invisible mesh
-        ))
-        first = False
+        xs += [V[i,0], V[j,0], None]
+        ys += [V[i,1], V[j,1], None]
+        zs += [V[i,2], V[j,2], None]
+
+    fig.add_trace(go.Scatter3d(
+        x=xs, y=ys, z=zs,
+        mode="lines",
+        line=dict(width=6),
+        name=name,
+        showlegend=True,
+        hoverinfo="skip",
+        marker=dict(color=color),
+        legendgroup=name,          # <-- group with mesh
+    ))
 
 def add_hover_mesh(fig, name, color, flux_range, energy_range, temp_range, opacity=0.01):
     V, _, F = cuboid_vertices(flux_range, energy_range, temp_range)
     i, j, k = zip(*F)
-    # Ultra-low opacity mesh so hovering anywhere on the box shows its name
     fig.add_trace(go.Mesh3d(
         x=V[:,0], y=V[:,1], z=V[:,2],
         i=i, j=j, k=k,
         color=color, opacity=opacity,
-        name=name, showlegend=False,
-        hoverinfo="text", text=name
+        name=name,
+        showlegend=False,          # no extra legend entry
+        hoverinfo="text", text=name,
+        legendgroup=name,          # <-- same group as wireframe
     ))
 
 def add_filled_box(fig, name, color, flux_range, energy_range, temp_range, opacity=0.15):
@@ -203,7 +206,11 @@ fig.update_layout(
         # Give the 3D scene more vertical room inside the figure
         domain=dict(x=[0.0, 1.0], y=[0.0, 1.0]),
     ),
-    legend=dict(x=1.02, y=1, bgcolor="rgba(255,255,255,0.7)"),
+    legend=dict(
+        x=1.02, y=1,
+        bgcolor="rgba(255,255,255,0.7)",
+        groupclick="togglegroup"   # <-- clicking the label toggles the whole group
+    ),
     margin=dict(l=0, r=0, t=30, b=0),
     height=height,
 )
@@ -212,6 +219,7 @@ st.plotly_chart(fig, width='stretch')
 
 with st.expander("Show raw data"):
     st.dataframe(df, width='stretch')
+
 
 
 
